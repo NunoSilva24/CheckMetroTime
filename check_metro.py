@@ -113,7 +113,8 @@ def compute_times(tables):
         if st.get("trip_id") in trip_ids and st.get("stop_id") in stop_ids:
             dep = st.get("departure_time") or st.get("arrival_time")
             if dep and lo <= to_minutes(dep) <= hi:
-                times.add(dep[:5])
+                h, m = dep.split(":")[:2]
+                times.add(f"{int(h):02d}:{int(m):02d}")
     return sorted(times), ref.isoformat(), len(stop_ids), len(trip_ids)
 
 def send_email(subject, body):
