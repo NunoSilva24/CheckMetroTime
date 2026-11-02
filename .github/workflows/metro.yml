@@ -1,0 +1,44 @@
+name: Vigia horários do metro
+
+on:
+  schedule:
+    - cron: "0 6 * * 1-5" # 06:00 de segunda a sexta
+  workflow_dispatch: {} # permite correr à mão no separador Actions
+
+permissions:
+  contents: write # para gravar o state.json de volta no repo
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verificar horários
+        env:
+          # obrigatórias
+          METRO_STOP: ${{ secrets.METRO_STOP }} # ex.: ISMAI
+          METRO_HEADSIGN: ${{ secrets.METRO_HEADSIGN }} # destino, ex.: Campanhã
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          # opcionais
+          METRO_LINE: ${{ secrets.METRO_LINE }} # ex.: C, B; vazio = todas as linhas
+          # METRO_WINDOW_START: "07:45"
+          # METRO_WINDOW_END:   "08:45"
+          # SMTP_HOST / SMTP_PORT só se não for Gmail
+        run: python check_metro.py
+
+      - name: Gravar estado se mudou
+        run: |
+          git add state.json
+          if ! git diff --cached --quiet; then
+            git config user.name  "github-actions"
+            git config user.email "actions@github.com"
+            git commit -m "Atualizados horários do metro"
+            git push
+          fi
