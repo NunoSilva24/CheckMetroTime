@@ -40,10 +40,22 @@ jobs:
       - name: Gravar estado se mudou
         run: |
           git add state.json
-          if ! git diff --cached --quiet; then
-            git config user.name  "github-actions"
-            git config user.email "actions@github.com"
-            git commit -m "Atualiza horários do metro"
-            git pull --rebase origin ${GITHUB_REF_NAME}   # sincroniza antes de enviar
-            git push
+          if git diff --cached --quiet; then
+            echo "Sem alterações no state.json."
+            exit 0
           fi
+          git config user.name  "github-actions"
+          git config user.email "actions@github.com"
+          git commit -m "Atualiza horários do metro"
+          for i in 1 2 3 4 5; do
+            if git push; then
+              echo "state.json gravado."
+              exit 0
+            fi
+            echo "push rejeitado (tentativa $i) — a sincronizar e a repetir..."
+            git fetch origin "${GITHUB_REF_NAME}"
+            git rebase "origin/${GITHUB_REF_NAME}" || git rebase --abort
+            sleep 3
+          done
+          echo "Não consegui gravar o state.json após várias tentativas."
+          exit 1
